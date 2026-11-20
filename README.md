@@ -10,12 +10,12 @@ Prérequis : **uv** et les fichiers fournis dans `donnees/`. Ce dossier et `.env
 
 ```sh
 uv sync
-uv run streamlit run app/streamlit_app.py
+uv run streamlit run app/streamlit_app.py --server.address 127.0.0.1
 ```
 
 Ouvrir l'adresse affichée dans le terminal, généralement [localhost:8501](http://localhost:8501). La navigation latérale donne accès aux deux pages.
 
-Pour le langage naturel, renseigner `ANTHROPIC_API_KEY` dans le fichier `.env` à la racine. La clé n'est jamais à commiter. Le modèle par défaut est `claude-haiku-4-5`, modifiable avec `ANTHROPIC_MODEL`.
+Pour le langage naturel, créer un fichier `.env` à la racine en reprenant [.env.example](.env.example), puis renseigner `ANTHROPIC_API_KEY`. Conserver le `.env` existant s'il est déjà configuré. La clé n'est jamais à commiter. Le modèle par défaut est `claude-haiku-4-5`, modifiable avec `ANTHROPIC_MODEL`.
 
 **Le rapprochement et les questions prédéfinies fonctionnent sans clé API.**
 
@@ -37,11 +37,12 @@ L'opérateur dépose son inventaire interne et les relevés des trois conservate
 
 ```mermaid
 flowchart LR
-    A[5 fichiers bruts] --> B[Lecture et contrôles]
-    B --> C[Nettoyage et exclusions]
-    C --> D[Regroupement des positions]
-    D --> E[Comparaison des inventaires]
-    E --> F[Streamlit et téléchargements]
+    A["5 fichiers bruts"] --> B["Lecture et contrôles<br/>lecture.py"]
+    B --> C["Nettoyage, exclusions et regroupement<br/>preparation.py"]
+    C --> D["Comparaison et qualification des suspens<br/>rapprochement.py"]
+    D --> E["Tableaux et filtres<br/>app/streamlit_app.py"]
+    D --> F["CSV et point de situation<br/>exports.py"]
+    F --> E
 ```
 
 La logique est répartie entre `src/lecture.py`, `src/preparation.py`, `src/rapprochement.py` et `src/exports.py`. L'interface se trouve dans `app/streamlit_app.py`. Les transformations se font en mémoire ; les références aux lignes sources sont conservées.
@@ -68,12 +69,12 @@ Le gérant pose une question ou choisit une consultation prédéfinie. L'applica
 
 ```mermaid
 flowchart LR
-    A[Question du gérant] --> B[Anthropic : consultation et paramètres]
-    C[Question prédéfinie sans API] --> D[Catalogue de SELECT autorisés]
+    A["Question du gérant"] --> B["Anthropic : interprétation<br/>assistant.py"]
+    C["Question prédéfinie sans API"] --> D["Catalogue de SELECT paramétrés<br/>base.py"]
     B --> D
-    D --> E[SQLite en lecture seule]
-    E --> F[Calculs Python]
-    F --> G[Réponse, SQL et sources dans Streamlit]
+    D --> E["SQLite en lecture seule<br/>orsay.db"]
+    E --> F["Calculs Python déterministes<br/>base.py"]
+    F --> G["Réponse, SQL et sources<br/>app/pages/assistant_gerants.py"]
 ```
 
 `src/assistant.py` interprète la question avec Anthropic. `src/base.py` exécute une requête prédéfinie et paramétrée, puis calcule la réponse. `app/pages/assistant_gerants.py` fournit l'interface. Aucun SQL libre ni montant n'est généré par le modèle.
@@ -102,6 +103,8 @@ flowchart LR
 **Exécuté par l'assistant :** 60 tests réussis sur le besoin 1 avant l'ajout du besoin 2, dont l'intégration Streamlit avec les vrais fichiers et les exports. Pour le besoin 2 : vérification directe des cinq consultations, du mode sans API et d'un parcours complet Streamlit → appel réel Anthropic → SQLite → réponse. L'encours PAT obtenu est **256 448 170,50 EUR** au 25/09/2026. Les fichiers bruts et la base sont restés inchangés.
 
 **Validation humaine :** à compléter lors de la démonstration ; aucune vérification manuelle par l'humain n'est déclarée ici. Le besoin 2 a été livré comme MVP, sans nouvelle suite pytest, conformément à la priorité donnée au délai.
+
+Les captures montrent l'application exécutée sur le **jeu fictif du cas pratique**. Aucun fichier de données brutes ni secret n'est inclus dans le dépôt ; `.env.example` ne contient aucune clé. Les questions saisies en mode langage naturel et le contexte fonds/dates sont transmis à Anthropic ; les tables de positions ne lui sont pas envoyées par l'application.
 
 Le MVP traite un fonds par question et la photographie du **25/09/2026**. Les demandes hors catalogue sont refusées. Les mouvements peuvent fournir des éléments explicatifs, sans prouver la cause d'un suspens. Il n'y a pas d'historique persistant ni d'envoi automatique au responsable. Les formats d'entrée suivent l'énoncé fourni.
 
