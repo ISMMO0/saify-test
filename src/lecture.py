@@ -80,7 +80,7 @@ def lire_a(contenu: bytes):
             raise ValueError(f"Conservateur A:ligne {numero} : compte texte requis (zéros initiaux)")
         positions.append(dict(zip(["compte", "isin", "libelle", "quantite"], valeurs),
                               date_arrete=date, action="C",
-                              sources=[f"depositaire_A.xlsx/Positions:ligne {numero}"]))
+                              sources=[f"depositaire_A_{date.replace('-', '')}.xlsx/Positions:ligne {numero}"]))
     if not positions:
         raise ValueError("Conservateur A : aucune position")
     return pd.DataFrame(positions), []
@@ -98,11 +98,11 @@ def lire_b(contenu: bytes):
         chiffres = ligne[16:31]
         positions.append({"compte": ligne[1:4], "isin": ligne[4:16],
                           "quantite": chiffres[:-2] + "." + chiffres[-2:], "date_arrete": date,
-                          "action": "C", "sources": [f"depositaire_B.txt:ligne {numero}"]})
+                          "action": "C", "sources": [f"depositaire_B_{date.replace('-', '')}.txt:ligne {numero}"]})
     if not positions:
         raise ValueError("Conservateur B : aucune position")
     attendu = int(lignes[-1][1:7])
-    controles = [controle("B", f"depositaire_B.txt:ligne {len(lignes)}", "nombre_details", attendu == len(positions),
+    controles = [controle("B", f"depositaire_B_{date.replace('-', '')}.txt:ligne {len(lignes)}", "nombre_details", attendu == len(positions),
                           "Nombre de détails avant toute exclusion", attendu, len(positions))]
     return pd.DataFrame(positions), controles
 
@@ -123,10 +123,10 @@ def lire_c(contenu: bytes):
             raise ValueError(f"Conservateur C:Item {numero} : dimensions absentes ou dupliquées")
         positions.append({"compte": valeurs["COMPTE"], "isin": valeurs["CODE_ISIN"],
                           "quantite": valeurs["QUANTITE"], "action": valeurs["ACTION"], "date_arrete": date,
-                          "sources": [f"depositaire_C.xml:Item {numero}, lot {valeurs['LOT']}"]})
+                          "sources": [f"depositaire_C_{date.replace('-', '')}.xml:Item {numero}, lot {valeurs['LOT']}"]})
     if not positions:
         raise ValueError("Conservateur C : aucun Item")
-    controles = [controle("C", "depositaire_C.xml:Entete/NbItems", "nombre_items", attendu == len(items),
+    controles = [controle("C", f"depositaire_C_{date.replace('-', '')}.xml:Entete/NbItems", "nombre_items", attendu == len(items),
                           "Comptage incluant les annulations", attendu, len(items))]
     return pd.DataFrame(positions), controles
 

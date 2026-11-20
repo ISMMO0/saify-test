@@ -73,3 +73,19 @@ def test_ligne_ininterpretable_visible_bloquante(sources):
     resultat, controles = preparer(table, lire_parametrage(sources["parametrage"]), "interne")
     assert len(resultat) == 2
     assert controles[0]["bloquant"] is True
+
+
+@pytest.mark.parametrize("libelle", ["Inconnu", "BNP et CACEIS"])
+def test_conservateur_inconnu_ou_ambigu_refuse(libelle):
+    with pytest.raises(ValueError):
+        normaliser_conservateur(libelle)
+
+
+@pytest.mark.parametrize("contenu", [
+    b"H20260925RELEVE\nDORPFR000001037300000000000050\nT000001\n",
+    b"H20260925RELEVE\nDORPFR0000010373ABCDEFGHIJKLMNO\nT000001\n",
+    b"H20260925RELEVE\nDORPFR0000010373000000000000500\n",
+])
+def test_largeur_fixe_b_invalide_refusee(contenu):
+    with pytest.raises(ValueError):
+        lire_b(contenu)
