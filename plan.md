@@ -4,8 +4,8 @@
 
 Construire une application Streamlit permettant à l'opérateur du middle office de déposer les fichiers du matin,
 de repérer les suspens et de télécharger un point de situation pour son responsable.
-Ce document décrit le périmètre cible. La lecture du CSV interne est implémentée et vérifiée sur la branche backend ;
-la préparation, les autres lecteurs, le rapprochement et l'interface restent à réaliser.
+Ce document décrit le périmètre du besoin 1, désormais implémenté et intégré sur main.
+Les tests métier, d'interface et d'intégration sur les fichiers fournis sont exécutés ; voir README.md pour l'état et les limites.
 L'énoncé fait foi ; les consignes de développement sont dans AGENTS.md.
 
 Le besoin 2 (questions en langage naturel sur orsay.db) sera traité plus tard.
@@ -49,7 +49,7 @@ pyproject.toml
 uv.lock
 ```
 
-Les dossiers app/, src/ et tests/ sont initialisés. Le lecteur CSV et ses tests sont implémentés sur la branche backend.
+Les dossiers app/, src/ et tests/ contiennent l'implémentation et ses tests.
 README.md décrit l'état actuel. pyproject.toml et uv.lock configurent les dépendances.
 
 ## Entrées
@@ -81,7 +81,7 @@ Les noms réels de colonnes et les feuilles Excel seront examinés avant de code
 
 Pas d'Uvicorn nécessaire : Streamlit lance son propre serveur.
 Pas de dépendance Anthropic pour cette étape ; le SDK sera ajouté lors du besoin 2.
-Commandes cibles, à rendre fonctionnelles lors de l'implémentation :
+Commandes disponibles :
 
 ```sh
 uv sync

@@ -19,63 +19,82 @@ Les fichiers bruts restent intacts dans `donnees/`, en local ; ils ne sont pas p
 `orsay.db` est réservé au second besoin et ne sert pas de référence pour le rapprochement.
 Pour utiliser le projet sur un autre poste, récupérer ces fichiers séparément auprès de leur source.
 
-## Traitement et sorties prévus
+## Traitement et sorties
 
 Lecture et contrôles → nettoyage et exclusions → regroupement par fonds/ISIN/conservateur → comparaison.
 Les quantités sont calculées par Python, sans LLM, sans seuil de tolérance, avec références aux lignes sources.
 
-L'interface Streamlit présentera trois résultats :
+L'interface Streamlit présente trois résultats :
 
 - **Suspens** : un tableau par problème, avec quantités, écart, type, action et sources ; export `suspens.csv`.
 - **Point de situation** : texte prêt à transmettre au responsable ; export `point_situation.md`.
 - **Contrôles et anomalies** : dates, comptages, exclusions et motifs ; export `controles.csv`.
 
-Les CSV prévus utilisent UTF-8 avec BOM et le séparateur `;`.
+Les CSV utilisent UTF-8 avec BOM et le séparateur `;`. Les filtres changent l'affichage ; les téléchargements
+et la synthèse portent sur l'ensemble du rapprochement.
 
 ## Organisation et choix techniques
 
-`app/` contient le fichier réservé à Streamlit ; `src/lecture.py` contient le lecteur du CSV interne,
-les autres scripts restent des squelettes. `tests/test_lecture.py` vérifie ce premier lecteur.
+`app/streamlit_app.py` contient l'interface ; `src/` contient la lecture, la préparation, le rapprochement et les exports.
+`tests/` vérifie les règles métier, l'interface et leur intégration sur les fichiers fournis lorsqu'ils sont présents.
 Stack configurée : Python 3.12, uv, pandas, openpyxl, Streamlit et pytest, avec les bibliothèques standard pour XML
 et les quantités décimales exactes. Fonctions simples et logique métier indépendante de l'interface.
 Voir [plan.md](plan.md) pour le détail et [AGENTS.md](AGENTS.md) pour les consignes.
 
 ## État et lancement
 
-Le lecteur CSV est implémenté : il reçoit des bytes et retourne une table pandas contenant les valeurs brutes
-et leurs lignes sources. Il refuse les en-têtes invalides, les lignes décalées et les inventaires vides.
-Il ne nettoie ni n'exclut encore les positions. Les autres lecteurs, la préparation, le rapprochement,
-les exports et l'interface restent à implémenter.
+Le besoin 1 est implémenté et intégré : cinq chargements, contrôles, nettoyage, exclusions, agrégations,
+qualification des suspens, références sources et trois téléchargements. Aucune clé API n'est nécessaire.
 
-Installer les dépendances et lancer les tests depuis la racine du dépôt :
+Depuis la racine du dépôt, installer puis lancer l'interface :
 
 ```sh
 uv sync
-uv run pytest -q
+uv run streamlit run app/streamlit_app.py
 ```
 
-Tester directement le lecteur sur le fichier local :
+Charger les cinq fichiers dans le panneau latéral, puis cliquer sur **Lancer le rapprochement**.
+Sur le jeu fourni au 25/09/2026 : **7 suspens**, **3 exclusions visibles**, aucun contrôle bloquant en échec.
+Les 37 lignes PMS donnent 30 positions agrégées après exclusions ; les conservateurs donnent 29 positions.
+
+Commandes de vérification sans navigateur :
 
 ```sh
+uv run pytest -q
 uv run python src/lecture.py
+uv run python src/rapprochement.py
 ```
 
-La future commande d'interface sera `uv run streamlit run app/streamlit_app.py` ; l'interface est encore un squelette.
+La dernière commande affiche le point de situation et les contrôles dans le terminal.
+Les tests utilisant les fichiers réels sont ignorés si ces fichiers locaux ne sont pas disponibles.
 
 ## Interprétations
 
 - Les données d'entrée restent locales, exclues de Git, et ne sont jamais réécrites par le programme.
-- Le point de situation sera construit par un modèle de texte déterministe, sans appel Anthropic.
-- Convention prévue : écart = quantité conservateur − quantité interne.
-- Une livraison chez le mauvais conservateur sera présentée comme un seul suspens.
+- Le point de situation est construit par un modèle de texte déterministe, sans appel Anthropic.
+- Convention : écart = quantité conservateur − quantité interne.
+- Une livraison chez le mauvais conservateur est un seul suspens si l'appariement entre absence et présence est unique.
+  Les répartitions ambiguës restent séparées pour examen humain.
+- Sous-compte absent : exclusion signalée, non bloquante ; P3G et annulations C sont également exclus et visibles.
+- Dates incohérentes : aucune comparaison. Compte inconnu ou quantité illisible : exclusion bloquante,
+  résultat incomplet et suspens éventuels provisoires.
+- Le format des ISIN est contrôlé ; leur clé n'est ni validée ni corrigée automatiquement.
+
+## Limites
+
+Les lecteurs suivent les formats de l'énoncé (notamment feuille Positions et en-têtes en ligne 3 pour A).
+Il n'y a pas d'historique persistant, d'envoi automatique au responsable ou de recherche de cause dans la base.
+Le besoin 2 est analysé mais pas implémenté. L'utilisateur doit examiner les anomalies avant de transmettre la synthèse.
 
 ## Vérifications
 
 L'assistant a vérifié par commandes Git l'identité configurée et l'état du dépôt ; il a lu l'énoncé et les consignes.
 Il a comparé les empreintes Git des six fichiers de données aux originaux : identiques octet pour octet.
-Sur la branche backend : `uv sync` exécuté avec Python 3.12.13 ; `uv run pytest -q` donne **10 tests réussis**.
-Un essai réel du lecteur confirme 37 positions, dont une P3G et une sans sous-compte conservées à ce stade,
-avec vérification que le CSV n'a pas changé.
-La lecture CSV est vérifiée ; les règles métier de préparation et de rapprochement ne le sont pas encore.
+`uv sync` a été exécuté avec Python 3.12.13 ; `uv run pytest -q` donne **60 tests réussis** sur main.
+Les tests couvrent les règles métier et les interactions Streamlit.
+Deux essais d'intégration AppTest utilisent le vrai moteur et les cinq vrais fichiers, sans simulation :
+chargement, 7 suspens, filtres, trois téléchargements et contrôle de comptage volontairement erroné.
+Les contenus CSV exportés sont relus et les empreintes des entrées sont contrôlées après traitement.
+La commande directe de rapprochement a été exécutée avec succès.
 Aucune vérification manuelle de l'application par l'humain n'est déclarée à ce stade.
 Les secrets `.env` sont exclus de Git et ne doivent jamais être partagés.
