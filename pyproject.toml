@@ -1,0 +1,17 @@
+[project]
+name = "orsay-rapprochement"
+version = "0.1.0"
+description = "Rapprochement des positions titres Orsay Gestion"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "pandas>=2.2,<4",
+    "openpyxl>=3.1,<4",
+    "streamlit>=1,<2",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<10"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

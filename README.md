@@ -34,17 +34,33 @@ Les CSV prévus utilisent UTF-8 avec BOM et le séparateur `;`.
 
 ## Organisation et choix techniques
 
-`app/` contient le fichier réservé à Streamlit ; `src/` contient les fichiers réservés aux scripts de lecture,
-préparation, rapprochement et export ; `tests/` accueillera les tests métier. Ces fichiers sont des squelettes.
-Stack prévue : Python 3.12, uv, pandas, openpyxl, Streamlit et pytest, avec les bibliothèques standard pour XML
+`app/` contient le fichier réservé à Streamlit ; `src/lecture.py` contient le lecteur du CSV interne,
+les autres scripts restent des squelettes. `tests/test_lecture.py` vérifie ce premier lecteur.
+Stack configurée : Python 3.12, uv, pandas, openpyxl, Streamlit et pytest, avec les bibliothèques standard pour XML
 et les quantités décimales exactes. Fonctions simples et logique métier indépendante de l'interface.
 Voir [plan.md](plan.md) pour le détail et [AGENTS.md](AGENTS.md) pour les consignes.
 
 ## État et lancement
 
-Le projet est au stade du cadrage. L'application, les dépendances et les tests restent à implémenter.
-Les futures commandes seront `uv sync`, `uv run pytest` et `uv run streamlit run app/streamlit_app.py` ;
-elles ne permettent pas encore de lancer une solution fonctionnelle.
+Le lecteur CSV est implémenté : il reçoit des bytes et retourne une table pandas contenant les valeurs brutes
+et leurs lignes sources. Il refuse les en-têtes invalides, les lignes décalées et les inventaires vides.
+Il ne nettoie ni n'exclut encore les positions. Les autres lecteurs, la préparation, le rapprochement,
+les exports et l'interface restent à implémenter.
+
+Installer les dépendances et lancer les tests depuis la racine du dépôt :
+
+```sh
+uv sync
+uv run pytest -q
+```
+
+Tester directement le lecteur sur le fichier local :
+
+```sh
+uv run python -c 'from pathlib import Path; from src.lecture import lire_interne; print(lire_interne(Path("donnees/positions_internes.csv").read_bytes()).to_string(index=False))'
+```
+
+La future commande d'interface sera `uv run streamlit run app/streamlit_app.py` ; l'interface est encore un squelette.
 
 ## Interprétations
 
@@ -56,8 +72,10 @@ elles ne permettent pas encore de lancer une solution fonctionnelle.
 ## Vérifications
 
 L'assistant a vérifié par commandes Git l'identité configurée et l'état du dépôt ; il a lu l'énoncé et les consignes.
-Il a vérifié la syntaxe des six fichiers Python avec `ast.parse` et comparé les empreintes Git des six fichiers
-de données aux originaux : identiques octet pour octet.
-Aucun traitement métier ni résultat chiffré n'a encore été exécuté ou validé.
+Il a comparé les empreintes Git des six fichiers de données aux originaux : identiques octet pour octet.
+Sur la branche backend : `uv sync` exécuté avec Python 3.12.13 ; `uv run pytest -q` donne **10 tests réussis**.
+Un essai réel du lecteur confirme 37 positions, dont une P3G et une sans sous-compte conservées à ce stade,
+avec vérification que le CSV n'a pas changé.
+La lecture CSV est vérifiée ; les règles métier de préparation et de rapprochement ne le sont pas encore.
 Aucune vérification manuelle de l'application par l'humain n'est déclarée à ce stade.
 Les secrets `.env` sont exclus de Git et ne doivent jamais être partagés.

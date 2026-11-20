@@ -4,7 +4,8 @@
 
 Construire une application Streamlit permettant à l'opérateur du middle office de déposer les fichiers du matin,
 de repérer les suspens et de télécharger un point de situation pour son responsable.
-Ce document décrit le travail prévu : aucune fonctionnalité applicative n'est encore implémentée ou vérifiée.
+Ce document décrit le périmètre cible. La lecture du CSV interne est implémentée et vérifiée sur la branche backend ;
+la préparation, les autres lecteurs, le rapprochement et l'interface restent à réaliser.
 L'énoncé fait foi ; les consignes de développement sont dans AGENTS.md.
 
 Le besoin 2 (questions en langage naturel sur orsay.db) sera traité plus tard.
@@ -48,8 +49,8 @@ pyproject.toml
 uv.lock
 ```
 
-Les dossiers app/, src/ et tests/ sont initialisés avec des fichiers sans logique applicative.
-README.md décrit l'état actuel. pyproject.toml et uv.lock seront créés lors de la configuration des dépendances.
+Les dossiers app/, src/ et tests/ sont initialisés. Le lecteur CSV et ses tests sont implémentés sur la branche backend.
+README.md décrit l'état actuel. pyproject.toml et uv.lock configurent les dépendances.
 
 ## Entrées
 
