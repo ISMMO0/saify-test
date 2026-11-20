@@ -8,7 +8,10 @@ Ce document décrit le périmètre du besoin 1, désormais implémenté et inté
 Les tests métier, d'interface et d'intégration sur les fichiers fournis sont exécutés ; voir README.md pour l'état et les limites.
 L'énoncé fait foi ; les consignes de développement sont dans AGENTS.md.
 
-Le besoin 2 (questions en langage naturel sur orsay.db) sera traité plus tard.
+Le besoin 2 dispose désormais d'un MVP distinct : src/assistant.py classe la question avec Anthropic,
+src/base.py exécute un SELECT du catalogue en lecture seule et calcule la réponse,
+app/pages/assistant_gerants.py affiche réponse, SQL, paramètres, lignes brutes et détails.
+Voir README.md pour le périmètre et les vérifications directes ; aucun nouveau pytest pour ce MVP.
 Le besoin 1 fonctionne sans appel LLM ni clé API. Le point de situation utilise un modèle de texte déterministe.
 
 ## Architecture simple

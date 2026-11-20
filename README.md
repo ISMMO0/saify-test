@@ -2,7 +2,7 @@
 
 Projet du cas pratique Saify : aider le middle office à comparer son inventaire PMS avec les positions
 déclarées par trois conservateurs, puis à identifier les suspens et les actions à mener.
-Le périmètre actuel est le premier besoin de l'énoncé. L'assistant de consultation de la base viendra ensuite.
+Le premier besoin est intégré ; un MVP du second besoin propose des consultations de la base en lecture seule.
 
 ## Entrées
 
@@ -84,13 +84,35 @@ Les tests utilisant les fichiers réels sont ignorés si ces fichiers locaux ne 
 
 Les lecteurs suivent les formats de l'énoncé (notamment feuille Positions et en-têtes en ligne 3 pour A).
 Il n'y a pas d'historique persistant, d'envoi automatique au responsable ou de recherche de cause dans la base.
-Le besoin 2 est analysé mais pas implémenté. L'utilisateur doit examiner les anomalies avant de transmettre la synthèse.
+L'utilisateur doit examiner les anomalies avant de transmettre la synthèse.
+
+## Besoin 2 — MVP Questions aux gérants
+
+Dans Streamlit, ouvrir **assistant gerants** dans la navigation latérale. Deux modes :
+
+- **Langage naturel** : la clé `ANTHROPIC_API_KEY` est chargée depuis `.env`, uniquement en local.
+  Anthropic choisit une consultation et ses paramètres ; il ne calcule pas les chiffres et ne produit aucun SQL libre.
+  Exemple : « Quel est l'encours valorisé d'Orsay Patrimoine ? »
+- **Questions prédéfinies** : sélectionner une consultation et un fonds, sans clé ni appel API.
+
+Les consultations portent sur l'encours titres, la concentration par émetteur, les échéances de principal,
+les opérations en attente et les mouvements candidats d'un suspens. La réponse montre le SELECT exécuté,
+ses paramètres, les résultats bruts et les contributions aux calculs. La base reste en lecture seule.
+Référence disponible : 25/09/2026. Valorisation selon mode de cotation : nominal × cours / 100 ou quantité × cours.
+Ce n'est pas une valeur liquidative complète. Les mouvements candidats ne prouvent pas la cause d'un suspens.
+Modèle par défaut : `claude-haiku-4-5`, remplaçable via `ANTHROPIC_MODEL` dans l'environnement.
+
+Un fonds par question ; les demandes hors catalogue sont refusées. Ce MVP est livré sans nouvelle suite pytest,
+à la demande de l'utilisateur : seules les vérifications directes sont réalisées. Les cinq consultations ont été
+exécutées ; la page en mode prédéfini et le parcours complet page → appel réel Anthropic → SQLite → réponse PAT
+ont été vérifiés. L'encours obtenu est de 256 448 170,50 EUR au 25/09/2026. L'empreinte de la base reste inchangée.
+Les positions ne sont pas transmises à Anthropic : seuls la question et le contexte fonds/dates le sont.
 
 ## Vérifications
 
 L'assistant a vérifié par commandes Git l'identité configurée et l'état du dépôt ; il a lu l'énoncé et les consignes.
 Il a comparé les empreintes Git des six fichiers de données aux originaux : identiques octet pour octet.
-`uv sync` a été exécuté avec Python 3.12.13 ; `uv run pytest -q` donne **60 tests réussis** sur main.
+`uv sync` a été exécuté avec Python 3.12.13 ; avant ajout du besoin 2, `uv run pytest -q` donne **60 tests réussis** sur main.
 Les tests couvrent les règles métier et les interactions Streamlit.
 Deux essais d'intégration AppTest utilisent le vrai moteur et les cinq vrais fichiers, sans simulation :
 chargement, 7 suspens, filtres, trois téléchargements et contrôle de comptage volontairement erroné.
