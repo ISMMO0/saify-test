@@ -48,7 +48,8 @@ pyproject.toml
 uv.lock
 ```
 
-Cette arborescence est une cible ; seuls les fichiers de cadrage et les données existent à ce stade.
+Les dossiers app/, src/ et tests/ sont initialisés avec des fichiers sans logique applicative.
+README.md décrit l'état actuel. pyproject.toml et uv.lock seront créés lors de la configuration des dépendances.
 
 ## Entrées
 

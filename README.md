@@ -34,8 +34,8 @@ Les CSV prévus utilisent UTF-8 avec BOM et le séparateur `;`.
 
 ## Organisation et choix techniques
 
-`app/` accueillera Streamlit ; `src/` contiendra les scripts de lecture, préparation, rapprochement et export ;
-`tests/` accueillera les tests métier.
+`app/` contient le fichier réservé à Streamlit ; `src/` contient les fichiers réservés aux scripts de lecture,
+préparation, rapprochement et export ; `tests/` accueillera les tests métier. Ces fichiers sont des squelettes.
 Stack prévue : Python 3.12, uv, pandas, openpyxl, Streamlit et pytest, avec les bibliothèques standard pour XML
 et les quantités décimales exactes. Fonctions simples et logique métier indépendante de l'interface.
 Voir [plan.md](plan.md) pour le détail et [AGENTS.md](AGENTS.md) pour les consignes.
@@ -56,6 +56,8 @@ elles ne permettent pas encore de lancer une solution fonctionnelle.
 ## Vérifications
 
 L'assistant a vérifié par commandes Git l'identité configurée et l'état du dépôt ; il a lu l'énoncé et les consignes.
+Il a vérifié la syntaxe des six fichiers Python avec `ast.parse` et comparé les empreintes Git des six fichiers
+de données aux originaux : identiques octet pour octet.
 Aucun traitement métier ni résultat chiffré n'a encore été exécuté ou validé.
 Aucune vérification manuelle de l'application par l'humain n'est déclarée à ce stade.
 Les secrets `.env` sont exclus de Git et ne doivent jamais être partagés.
