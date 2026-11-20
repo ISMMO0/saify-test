@@ -57,7 +57,7 @@ uv run pytest -q
 Tester directement le lecteur sur le fichier local :
 
 ```sh
-uv run python -c 'from pathlib import Path; from src.lecture import lire_interne; print(lire_interne(Path("donnees/positions_internes.csv").read_bytes()).to_string(index=False))'
+uv run python src/lecture.py
 ```
 
 La future commande d'interface sera `uv run streamlit run app/streamlit_app.py` ; l'interface est encore un squelette.

@@ -2,6 +2,7 @@
 
 import csv
 from io import StringIO
+from pathlib import Path
 
 import pandas as pd
 
@@ -31,3 +32,10 @@ def lire_interne(contenu: bytes, nom_source: str = "positions_internes.csv") -> 
     if not positions:
         raise ValueError(f"{nom_source} : aucune position")
     return pd.DataFrame(positions)
+
+
+if __name__ == "__main__":
+    fichier = Path(__file__).resolve().parents[1] / "donnees" / "positions_internes.csv"
+    positions = lire_interne(fichier.read_bytes())
+    print(f"Nombre de positions : {len(positions)}")
+    print(positions.to_string(index=False))
