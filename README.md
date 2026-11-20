@@ -1,122 +1,116 @@
-# Orsay Gestion — Rapprochement des positions
+# Orsay Gestion — Assistant middle office
 
-Projet du cas pratique Saify : aider le middle office à comparer son inventaire PMS avec les positions
-déclarées par trois conservateurs, puis à identifier les suspens et les actions à mener.
-Le premier besoin est intégré ; un MVP du second besoin propose des consultations de la base en lecture seule.
+Application réalisée pour le cas pratique Saify : **rapprocher les positions chaque matin** et **répondre aux questions des gérants à partir de la base de gestion**.
 
-## Entrées
+Le projet utilise Python 3.12, Streamlit, pandas et openpyxl. Les calculs sont exécutés par Python ; Anthropic intervient uniquement pour interpréter les questions du second besoin. Les fichiers bruts restent inchangés.
 
-Les fichiers bruts restent intacts dans `donnees/`, en local ; ils ne sont pas publiés dans le dépôt.
+## Lancer le projet
 
-| Fichier | Rôle |
-|---|---|
-| `positions_internes.csv` | Inventaire PMS : référence interne du rapprochement |
-| `depositaire_A_20260925.xlsx` | Positions du conservateur A, Excel |
-| `depositaire_B_20260925.txt` | Positions du conservateur B, largeur fixe |
-| `depositaire_C_20260925.xml` | Positions du conservateur C, XML |
-| `parametrage.xlsx` | Correspondances comptes/fonds, types de suspens et actions |
-
-`orsay.db` est réservé au second besoin et ne sert pas de référence pour le rapprochement.
-Pour utiliser le projet sur un autre poste, récupérer ces fichiers séparément auprès de leur source.
-
-## Traitement et sorties
-
-Lecture et contrôles → nettoyage et exclusions → regroupement par fonds/ISIN/conservateur → comparaison.
-Les quantités sont calculées par Python, sans LLM, sans seuil de tolérance, avec références aux lignes sources.
-
-L'interface Streamlit présente trois résultats :
-
-- **Suspens** : un tableau par problème, avec quantités, écart, type, action et sources ; export `suspens.csv`.
-- **Point de situation** : texte prêt à transmettre au responsable ; export `point_situation.md`.
-- **Contrôles et anomalies** : dates, comptages, exclusions et motifs ; export `controles.csv`.
-
-Les CSV utilisent UTF-8 avec BOM et le séparateur `;`. Les filtres changent l'affichage ; les téléchargements
-et la synthèse portent sur l'ensemble du rapprochement.
-
-## Organisation et choix techniques
-
-`app/streamlit_app.py` contient l'interface ; `src/` contient la lecture, la préparation, le rapprochement et les exports.
-`tests/` vérifie les règles métier, l'interface et leur intégration sur les fichiers fournis lorsqu'ils sont présents.
-Stack configurée : Python 3.12, uv, pandas, openpyxl, Streamlit et pytest, avec les bibliothèques standard pour XML
-et les quantités décimales exactes. Fonctions simples et logique métier indépendante de l'interface.
-Voir [plan.md](plan.md) pour le détail et [AGENTS.md](AGENTS.md) pour les consignes.
-
-## État et lancement
-
-Le besoin 1 est implémenté et intégré : cinq chargements, contrôles, nettoyage, exclusions, agrégations,
-qualification des suspens, références sources et trois téléchargements. Aucune clé API n'est nécessaire.
-
-Depuis la racine du dépôt, installer puis lancer l'interface :
+Prérequis : **uv** et les fichiers fournis dans `donnees/`. Ce dossier et `.env` restent locaux, exclus de Git : ils sont à récupérer séparément sur un autre poste.
 
 ```sh
 uv sync
 uv run streamlit run app/streamlit_app.py
 ```
 
-Charger les cinq fichiers dans le panneau latéral, puis cliquer sur **Lancer le rapprochement**.
-Sur le jeu fourni au 25/09/2026 : **7 suspens**, **3 exclusions visibles**, aucun contrôle bloquant en échec.
-Les 37 lignes PMS donnent 30 positions agrégées après exclusions ; les conservateurs donnent 29 positions.
+Ouvrir l'adresse affichée dans le terminal, généralement [localhost:8501](http://localhost:8501). La navigation latérale donne accès aux deux pages.
 
-Commandes de vérification sans navigateur :
+Pour le langage naturel, renseigner `ANTHROPIC_API_KEY` dans le fichier `.env` à la racine. La clé n'est jamais à commiter. Le modèle par défaut est `claude-haiku-4-5`, modifiable avec `ANTHROPIC_MODEL`.
 
-```sh
-uv run pytest -q
-uv run python src/lecture.py
-uv run python src/rapprochement.py
+**Le rapprochement et les questions prédéfinies fonctionnent sans clé API.**
+
+## Besoin 1 — Rapprocher les positions
+
+L'opérateur dépose son inventaire interne et les relevés des trois conservateurs. L'application compare les quantités par **fonds + ISIN + conservateur**, puis indique les problèmes à traiter et les actions attendues.
+
+### Entrées
+
+| Fichier | Rôle |
+|---|---|
+| `positions_internes.csv` | Inventaire PMS : référence interne du rapprochement |
+| `depositaire_A_20260925.xlsx` | Relevé du conservateur A, Excel |
+| `depositaire_B_20260925.txt` | Relevé du conservateur B, largeur fixe |
+| `depositaire_C_20260925.xml` | Relevé du conservateur C, XML |
+| `parametrage.xlsx` | Correspondances comptes/fonds, types de suspens et actions |
+
+### Architecture
+
+```mermaid
+flowchart LR
+    A[5 fichiers bruts] --> B[Lecture et contrôles]
+    B --> C[Nettoyage et exclusions]
+    C --> D[Regroupement des positions]
+    D --> E[Comparaison des inventaires]
+    E --> F[Streamlit et téléchargements]
 ```
 
-La dernière commande affiche le point de situation et les contrôles dans le terminal.
-Les tests utilisant les fichiers réels sont ignorés si ces fichiers locaux ne sont pas disponibles.
+La logique est répartie entre `src/lecture.py`, `src/preparation.py`, `src/rapprochement.py` et `src/exports.py`. L'interface se trouve dans `app/streamlit_app.py`. Les transformations se font en mémoire ; les références aux lignes sources sont conservées.
 
-## Interprétations
+### Sorties
 
-- Les données d'entrée restent locales, exclues de Git, et ne sont jamais réécrites par le programme.
-- Le point de situation est construit par un modèle de texte déterministe, sans appel Anthropic.
-- Convention : écart = quantité conservateur − quantité interne.
-- Une livraison chez le mauvais conservateur est un seul suspens si l'appariement entre absence et présence est unique.
-  Les répartitions ambiguës restent séparées pour examen humain.
-- Sous-compte absent : exclusion signalée, non bloquante ; P3G et annulations C sont également exclus et visibles.
-- Dates incohérentes : aucune comparaison. Compte inconnu ou quantité illisible : exclusion bloquante,
-  résultat incomplet et suspens éventuels provisoires.
-- Le format des ISIN est contrôlé ; leur clé n'est ni validée ni corrigée automatiquement.
+| Résultat affiché | Téléchargement |
+|---|---|
+| Tableau des suspens : fonds, ISIN, conservateur, quantités, écart, type, action et sources | `suspens.csv` |
+| Point de situation prêt à transmettre au responsable | `point_situation.md` |
+| Contrôles, anomalies et exclusions avec leurs motifs | `controles.csv` |
 
-## Limites
+Les CSV utilisent UTF-8 avec BOM et le séparateur `;`. Les filtres portent sur l'affichage ; les exports contiennent le rapprochement complet.
 
-Les lecteurs suivent les formats de l'énoncé (notamment feuille Positions et en-têtes en ligne 3 pour A).
-Il n'y a pas d'historique persistant, d'envoi automatique au responsable ou de recherche de cause dans la base.
-L'utilisateur doit examiner les anomalies avant de transmettre la synthèse.
+**Utilisation :** charger les cinq fichiers dans le panneau latéral, puis cliquer sur **Lancer le rapprochement**. Sur le jeu fourni au 25/09/2026 : **7 suspens et 3 exclusions visibles**, sans contrôle bloquant en échec.
 
-## Besoin 2 — MVP Questions aux gérants
+![Rapprochement exécuté : sept suspens et contrôles satisfaits](docs/screenshots/rapprochement.jpg)
 
-Dans Streamlit, ouvrir **assistant gerants** dans la navigation latérale. Deux modes :
+## Besoin 2 — Répondre aux gérants
 
-- **Langage naturel** : la clé `ANTHROPIC_API_KEY` est chargée depuis `.env`, uniquement en local.
-  Anthropic choisit une consultation et ses paramètres ; il ne calcule pas les chiffres et ne produit aucun SQL libre.
-  Exemple : « Quel est l'encours valorisé d'Orsay Patrimoine ? »
-- **Questions prédéfinies** : sélectionner une consultation et un fonds, sans clé ni appel API.
+Le gérant pose une question ou choisit une consultation prédéfinie. L'application lit **`donnees/orsay.db`** et affiche une réponse dont chaque chiffre peut être rapproché des données sources. Cette base ne sert jamais de référence au rapprochement du besoin 1.
 
-Les consultations portent sur l'encours titres, la concentration par émetteur, les échéances de principal,
-les opérations en attente et les mouvements candidats d'un suspens. La réponse montre le SELECT exécuté,
-ses paramètres, les résultats bruts et les contributions aux calculs. La base reste en lecture seule.
-Référence disponible : 25/09/2026. Valorisation selon mode de cotation : nominal × cours / 100 ou quantité × cours.
-Ce n'est pas une valeur liquidative complète. Les mouvements candidats ne prouvent pas la cause d'un suspens.
-Modèle par défaut : `claude-haiku-4-5`, remplaçable via `ANTHROPIC_MODEL` dans l'environnement.
+### Architecture
 
-Un fonds par question ; les demandes hors catalogue sont refusées. Ce MVP est livré sans nouvelle suite pytest,
-à la demande de l'utilisateur : seules les vérifications directes sont réalisées. Les cinq consultations ont été
-exécutées ; la page en mode prédéfini et le parcours complet page → appel réel Anthropic → SQLite → réponse PAT
-ont été vérifiés. L'encours obtenu est de 256 448 170,50 EUR au 25/09/2026. L'empreinte de la base reste inchangée.
-Les positions ne sont pas transmises à Anthropic : seuls la question et le contexte fonds/dates le sont.
+```mermaid
+flowchart LR
+    A[Question du gérant] --> B[Anthropic : consultation et paramètres]
+    C[Question prédéfinie sans API] --> D[Catalogue de SELECT autorisés]
+    B --> D
+    D --> E[SQLite en lecture seule]
+    E --> F[Calculs Python]
+    F --> G[Réponse, SQL et sources dans Streamlit]
+```
 
-## Vérifications
+`src/assistant.py` interprète la question avec Anthropic. `src/base.py` exécute une requête prédéfinie et paramétrée, puis calcule la réponse. `app/pages/assistant_gerants.py` fournit l'interface. Aucun SQL libre ni montant n'est généré par le modèle.
 
-L'assistant a vérifié par commandes Git l'identité configurée et l'état du dépôt ; il a lu l'énoncé et les consignes.
-Il a comparé les empreintes Git des six fichiers de données aux originaux : identiques octet pour octet.
-`uv sync` a été exécuté avec Python 3.12.13 ; avant ajout du besoin 2, `uv run pytest -q` donne **60 tests réussis** sur main.
-Les tests couvrent les règles métier et les interactions Streamlit.
-Deux essais d'intégration AppTest utilisent le vrai moteur et les cinq vrais fichiers, sans simulation :
-chargement, 7 suspens, filtres, trois téléchargements et contrôle de comptage volontairement erroné.
-Les contenus CSV exportés sont relus et les empreintes des entrées sont contrôlées après traitement.
-La commande directe de rapprochement a été exécutée avec succès.
-Aucune vérification manuelle de l'application par l'humain n'est déclarée à ce stade.
-Les secrets `.env` sont exclus de Git et ne doivent jamais être partagés.
+### Entrées et sorties
+
+- **Entrées :** une question, le fonds et les dates de référence ; la base `orsay.db` ; la clé Anthropic uniquement en mode langage naturel.
+- **Sorties :** réponse chiffrée, interprétation retenue, SELECT exécuté, paramètres, résultat brut et détail des calculs avec identifiants sources.
+- **Consultations disponibles :** encours titres, concentration par émetteur, échéances de principal, opérations en attente et mouvements candidats d'un suspens.
+
+**Utilisation :** ouvrir **assistant gerants** dans la navigation. Choisir le mode, saisir par exemple **« Quel est l'encours valorisé d'Orsay Patrimoine ? »**, puis cliquer sur **Obtenir la réponse**. Pour essayer sans API, choisir **Questions prédéfinies — sans API**.
+
+![Réponse réelle de l'assistant gérants et SELECT exécuté](docs/screenshots/assistant-gerants.jpg)
+
+## Choix et interprétations
+
+- Code métier séparé de l'interface, fonctions simples et calculs déterministes avec `Decimal`.
+- Aucun seuil de tolérance. Écart = quantité conservateur − quantité interne.
+- P3G, sous-comptes absents et annulations C exclus et signalés. Une ligne sans sous-compte est non bloquante ; un compte inconnu ou une quantité illisible invalide le résultat.
+- Une livraison chez le mauvais conservateur compte pour un seul suspens lorsque l'appariement est unique. Les cas ambigus restent séparés pour examen.
+- Dates incohérentes : aucune comparaison. Le format ISIN est contrôlé, sans correction ni validation de sa clé.
+- Pour la valorisation : nominal × cours / 100 si cotation en pourcentage, quantité × cours si cotation unitaire. L'encours titres n'est pas une valeur liquidative complète.
+
+## Vérifications et limites
+
+**Exécuté par l'assistant :** 60 tests réussis sur le besoin 1 avant l'ajout du besoin 2, dont l'intégration Streamlit avec les vrais fichiers et les exports. Pour le besoin 2 : vérification directe des cinq consultations, du mode sans API et d'un parcours complet Streamlit → appel réel Anthropic → SQLite → réponse. L'encours PAT obtenu est **256 448 170,50 EUR** au 25/09/2026. Les fichiers bruts et la base sont restés inchangés.
+
+**Validation humaine :** à compléter lors de la démonstration ; aucune vérification manuelle par l'humain n'est déclarée ici. Le besoin 2 a été livré comme MVP, sans nouvelle suite pytest, conformément à la priorité donnée au délai.
+
+Le MVP traite un fonds par question et la photographie du **25/09/2026**. Les demandes hors catalogue sont refusées. Les mouvements peuvent fournir des éléments explicatifs, sans prouver la cause d'un suspens. Il n'y a pas d'historique persistant ni d'envoi automatique au responsable. Les formats d'entrée suivent l'énoncé fourni.
+
+Commandes utiles depuis la racine :
+
+```sh
+uv run python src/lecture.py          # afficher le CSV interne
+uv run python src/rapprochement.py    # afficher le rapprochement et la synthèse
+uv run pytest -q                     # exécuter la suite existante
+```
+
+Le découpage détaillé se trouve dans [plan.md](plan.md) et les consignes dans [AGENTS.md](AGENTS.md).
